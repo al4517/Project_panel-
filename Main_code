@@ -1,0 +1,809 @@
+/***************************************************************************************
+*    Title: Project Panel
+*    Author: Alison Luo
+*    Date: 20/09/2019
+*    Code version: 1
+*    Availability: NA
+***************************************************************************************/
+
+//----------------------------------------------------------------
+//Libraries used
+#include <FastLED.h>
+#define NUM_LEDS 64
+#define LED_PIN 7
+
+//----------------------------------------------------------------
+CRGB leds[NUM_LEDS];
+int brightness=20;
+int matrixwidth=8;
+int direc=1;
+int cy=3;
+int cx=4;
+int cyf;
+int cxf;
+int leftp=2;
+int rightp=4;
+int frame=0;
+int selectp=1;
+int bsl;
+int bsr;
+int flash=200;
+
+int newround=1;//
+int ltor=0;//
+int rpoint=0;//
+int lpoint=0;//
+int select_game=0;//
+int game;//
+int initialset=1;//
+
+//-------PIN ALLOCATION AND STATE-------------------
+int joy1y=A0;
+int joy1x=A1;
+int joy1s=2;
+int joy2y=A2;
+int joy2x=A3;
+int joy2s=4;
+int rx_pos;
+int lx_pos;
+int ry_pos;
+int ly_pos;
+
+//-----------------PATTERN ARRAYS-------------------------------------
+int yw[14][2]={{7,5},
+{7,6},
+{8,4},
+{8,5},
+{8,6},
+{8,7},
+{9,4}, 
+{9,5},
+{9,6},
+{9,7},
+{10,4},
+{10,5},
+{10,6},
+{10,7}};
+
+
+int rw[9][2]={{11,4},
+{11,7},
+{12,3},
+{13,3},
+{14,3},
+{15,3},
+{16,3},
+{17,3},
+{18,3}};
+
+int ow[22][2]={{11,5},
+{11,6},
+{12,4},
+{12,5},
+{12,6},
+{12,7},
+{13,4},
+{13,5},
+{13,7},
+{14,4},
+{14,7},
+{15,4},
+{15,5},
+{15,7},
+{16,4},
+{16,5},
+{16,7},
+{17,4},
+{18,4},
+{18,5},
+{18,6},
+{18,7}};
+
+int pw[8][2]={{13,6},
+{14,5},
+{14,6},
+{15,6},
+{16,6},
+{17,5},
+{17,6},
+{17,7}};
+
+//--------POLLING VARIABLES ------------------
+
+unsigned long currentMillis;
+unsigned long prestep=0;
+unsigned long prevjoyl=0;
+unsigned long prevjoyr=0;
+unsigned long prevjoysl=0;
+unsigned long prevjoysr=0;
+unsigned long prevopsym=0;
+
+long timerstep=300;
+long timerjoy=200;
+long timerop=500;
+long timerjoyr=130;
+long timerjoys=100;
+
+//--------SETUP ------------------
+
+void setup( ) {
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.setBrightness(brightness);
+  Serial.begin (9600) ;
+  pinMode (joy1x, INPUT) ;
+  pinMode (joy1y, INPUT) ;
+  pinMode (joy1s, INPUT_PULLUP) ;
+  pinMode (joy2x, INPUT) ;
+  pinMode (joy2y, INPUT) ;
+  pinMode (joy2s, INPUT_PULLUP) ;
+  pinMode (LED_PIN, OUTPUT) ;
+}
+
+void loop( ) {
+  select_game=0;
+  game==0;
+  initialset=1;
+  rpoint=0;
+  lpoint=0;
+  newround=1;
+  ltor=0;
+  timerstep=300;
+  
+  FastLED.clear();
+  int option_page=options();
+  FastLED.clear();
+  delay(1000);
+  
+  while (rpoint<3 & lpoint<3 & game==1) {
+    Serial.println(String("Hello newround"));
+    currentMillis=millis();
+    if (newround==1||newround==2||newround==3) {
+      //set initials for each start of round
+      Serial.println(String("newround 1: ")+String(newround));
+      if (initialset==1) {
+        leftp=3;rightp=3;
+        if (newround==1 || newround==2) {
+          cy=1;
+        }
+        else {
+          cy=6;
+        }
+        cx=3;
+        leds[XY(cx,cy)] = CRGB ( 255,165,0); 
+        leds[XY(leftp,0)] = CRGB ( 0, 0, 255);
+        leds[XY(leftp+1,0)] = CRGB ( 0, 0, 255);
+        leds[XY(rightp,7)] = CRGB ( 0, 0, 255);
+        leds[XY(rightp+1,7)] = CRGB ( 0, 0, 255);
+        FastLED.show();
+      }
+      //----BEGINNING SCENE-----------------------------------------------------
+      if(currentMillis-prevjoyl > timerjoy) {
+        prevjoyl = currentMillis;
+        ly_pos=analogRead (joy1y);
+        if (ly_pos<400&leftp!=6) {
+          leds[XY(leftp,0)] = CRGB::Black;
+          leds[XY(cx,1)] = CRGB::Black;
+          leftp=leftp+1;
+          leds[XY(leftp+1,0)] = CRGB (0, 0, 255);     
+          if (newround==1||newround==2) {
+            direc=1;ltor=1;
+            cx=leftp;cy=1;
+          }
+          leds[XY(cx,cy)] = CRGB ( 255,165,0); 
+          FastLED.show();
+        }
+        else if (ly_pos>600&leftp!=0){
+          leds[XY(leftp+1,0)] = CRGB::Black;
+          leds[XY(cx,1)] = CRGB::Black;
+          leftp=leftp-1;
+          leds[XY(leftp,0)] = CRGB (0, 0, 255); 
+          if (newround==1||newround==2){
+            direc=1;ltor=1;
+            cx=leftp;cy=1;
+          }
+          leds[XY(cx,cy)] = CRGB ( 255,165,0);
+          FastLED.show();
+        }
+        initialset=0;
+      }
+      if(currentMillis-prevjoyr > timerjoyr) {
+        prevjoyr = currentMillis;
+        ry_pos=analogRead (joy2y);
+        if (ry_pos>600 &rightp!=6){
+          leds[XY(rightp,7)] = CRGB::Black;
+          leds[XY(cx,6)] = CRGB::Black;
+          rightp=rightp+1;
+          leds[XY(rightp+1,7)] = CRGB (0, 0, 255);  
+          if (newround==3){
+            direc=0;ltor=0;
+            cx=rightp;cy=6;
+          }
+          leds[XY(cx,cy)] = CRGB ( 255,165,0); 
+          FastLED.show();
+        }
+        else if (ry_pos<400&rightp!=0){
+          leds[XY(rightp+1,7)] = CRGB::Black;
+          leds[XY(cx,6)] = CRGB::Black;
+          rightp=rightp-1;
+          leds[XY(rightp,7)] = CRGB (0, 0, 255); 
+          if (newround==3){
+            direc=0;ltor=0;
+            cx=rightp;cy=6;
+          }
+          leds[XY(cx,cy)] = CRGB ( 255,165,0); 
+          FastLED.show();
+        }
+        initialset=0;
+      }
+      if(currentMillis-prevjoysl > timerjoys) {
+        prevjoysl = currentMillis;
+        bsl = digitalRead(joy1s);
+        if (bsl==LOW&(newround==2||newround==1)) {
+          newround=0;
+          initialset=0;
+        }
+      }
+      if(currentMillis-prevjoysr > timerjoys) {
+        prevjoysr = currentMillis;
+        bsr = digitalRead(joy2s);
+        if (bsr==LOW&newround==3) {
+          newround=0;
+          initialset=0;
+        }
+      }
+      continue;
+    }
+    
+    //--START OF ACTION LOOP---------------------------------------------------------------
+    currentMillis=millis();
+    if(currentMillis-prevjoyl > timerjoy) {
+      prevjoyl = currentMillis;
+      ly_pos=analogRead (joy1y);
+      if (ly_pos<400&leftp!=6&cy!=int(0)){
+        leds[XY(leftp,0)] = CRGB::Black;
+        leftp=leftp+1;
+        leds[XY(leftp+1,0)] = CRGB (0, 0, 255);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+      if (ly_pos>600&leftp!=0&cy!=int(0)){
+        leds[XY(leftp+1,0)] = CRGB::Black;
+        leftp=leftp-1;
+        leds[XY(leftp,0)] = CRGB (0, 0, 255);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+    }
+    if(currentMillis-prevjoyr > timerjoy) {
+      prevjoyr = currentMillis;
+      ry_pos=analogRead (joy2y);
+      if (ry_pos>600 &rightp!=6&cy!=int(7)){
+        leds[XY(rightp,7)] = CRGB::Black;
+        rightp=rightp+1;
+        leds[XY(rightp+1,7)] = CRGB (0, 0, 255);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+      if (ry_pos<400&rightp!=0&cy!=int(7)){
+        leds[XY(rightp+1,7)] = CRGB::Black;
+        rightp=rightp-1;
+        leds[XY(rightp,7)] = CRGB (0, 0, 255);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+    }
+    
+    if(currentMillis-prestep > timerstep) {
+      prestep = currentMillis;
+      if (cy==int(0) || cy==int(7)){
+        for (int i=0; i < 4;i++){
+          leds[XY(cx,cy)] = CRGB ( 235, 52, 52);
+          FastLED.show();
+          delay(flash);
+          leds[XY(cx,cy)] = CRGB::Black;
+          FastLED.show();
+          delay(flash);
+        }
+        if (cy==0){
+          rpoint=rpoint+1;
+          rowfill((8-rpoint),4,7,4,63,81,181);
+          if (lpoint>0){
+            rowfill((8-lpoint),3,7,3,63,81,181);
+          }
+          FastLED.show();
+          delay(3000);
+          newround=3;
+          rowfill(0,0,7,7,0,0,0);
+          initialset=1;
+          continue;
+        }
+        if (cy==7){
+          lpoint=lpoint+1;
+          rowfill((8-lpoint),3,7,3,63,81,181);
+          if (rpoint>0){
+            rowfill((8-rpoint),4,7,4,63,81,181);
+          }
+          FastLED.show();
+          delay(3000);
+          newround=2;
+          rowfill(0,0,7,7,0,0,0);
+          initialset=1;
+          continue;
+        }
+      }
+      //----BOUNDARY CONDITIONS-------------------------------------------------------------------
+      else if (cy==1 || cy==6 || cx==0 || cx==7){
+        if (cy==1 || cy==6){
+          if (cy==1 & ltor==int(0)& direc==0){
+            if ((cx==leftp || cx==leftp+1)& cx!=7){
+              RB(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              direc=1;
+              ltor=1;
+              continue;
+            }
+            else if (cx==leftp-1||(cx==leftp+2 & cx==7)||(cx==leftp+1 & cx==7)){
+              RU(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              ltor=1;
+              direc=0;
+              continue;
+            }
+          }
+          else if (cy==1 & ltor==int(0)& direc==1){
+            if ((cx==leftp || cx==leftp+1) & cx!=0){
+              RU(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              direc=0;
+              ltor=1;
+              continue;
+            }
+            else if (cx==leftp+2||(cx==leftp-1 & cx==0)||(cx==leftp & cx==0)){
+              RB(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              ltor=1;
+              direc=1;
+              continue;
+            }
+          }
+          else if (cy==6 & ltor==int(1)& direc==0){
+            if ((cx==rightp || cx==rightp+1)& cx!=0){
+              LU(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              ltor=0;
+              direc=1;
+              continue;
+            }
+            else if (cx==rightp+2||(cx==rightp-1 & cx==0)||(cx==rightp & cx==0)){
+              LB(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              ltor=0;
+              direc=0;
+              continue;
+            }
+          }
+          else if (cy==6 & ltor==int(1)& direc==1){
+            if ((cx==rightp || cx==rightp+1)& cx!=7){
+            LB(cx,cy,&cxf,&cyf);
+            cx=cxf;cy=cyf;
+            direc=0;
+            ltor=0;
+            continue;
+            }
+            else if (cx==rightp-1 || (cx==rightp+2 & cx==7)||(cx==rightp+1 & cx==7)){
+              LU(cx,cy,&cxf,&cyf);
+              cx=cxf;cy=cyf;
+              ltor=0;
+              direc=1;
+              continue;
+            }
+          }
+        }
+        if (cx==0 || cx==7){
+          if (cx==0 & ltor==int(1)){
+            RB(cx,cy,&cxf,&cyf);
+            cx=cxf;cy=cyf;
+            direc=1;
+            continue;
+          }
+          else if (cx==0 & ltor==int(0)){
+            LB(cx,cy,&cxf,&cyf);
+            cx=cxf;cy=cyf;
+            direc=0;
+            continue;
+          }
+          else if (cx==7 & ltor==int(1)){
+            RU(cx,cy,&cxf,&cyf);
+            cx=cxf;cy=cyf;
+            direc=0;
+            continue;
+          }
+          else if (cx==7 & ltor==int(0)){
+            LU(cx,cy,&cxf,&cyf);
+            cx=cxf;cy=cyf;
+            direc=1;
+            continue;
+          }
+        }
+      }
+      
+      //----ORDINARY STEP-----------------------------------------------------------------
+      if (direc==0 & ltor==int(1)){
+        Serial.println("Coordinates"+String(cx)+String(cy));
+        RU(cx,cy,&cxf,&cyf);
+        cx=cxf;cy=cyf;
+      }
+      else if (direc==1 & ltor==int(1)) {
+        Serial.println("Coordinates"+String(cx)+String(cy));
+        RB(cx,cy,&cxf,&cyf);
+        cx=cxf;cy=cyf;
+      }
+      else if (direc==0 & ltor==int(0)){
+        Serial.println("Coordinates"+String(cx)+String(cy));
+        LB(cx,cy,&cxf,&cyf);
+        cx=cxf;cy=cyf;
+      }
+      else if (direc==1 & ltor==int(0)) {
+        Serial.println("Coordinates"+String(cx)+String(cy));
+        LU(cx,cy,&cxf,&cyf);
+        cx=cxf;cy=cyf;
+      }
+    }
+  }
+  if (lpoint==3){
+    int win;
+    win= celebrate(String("l"));
+    delay(2000);
+  }
+  else if (rpoint==3){
+    int win;
+    win=celebrate(String("r"));
+    delay(2000);
+  }
+  delay(5000);
+  Serial.println(String("Finished"));
+}
+
+//----STEP FUNCTIONS-----------------------------------------------------------------
+void RB(int cx, int cy, int *cxf, int *cyf){
+  leds[XY(cx,cy)] = CRGB::Black;
+  *cxf=cx+1;
+  *cyf=cy+1;
+  leds[XY(*cxf,*cyf)] = CRGB ( 255,165,0);     //ltor=1 and right diag 
+  FastLED.show();
+}
+
+void RU(int cx, int cy, int *cxf, int *cyf){
+  leds[XY(cx,cy)] = CRGB::Black;
+  *cxf=cx-1;
+  *cyf=cy+1;
+  leds[XY(*cxf,*cyf)] = CRGB ( 255,165,0);     //ltor=1 and right diag 
+  FastLED.show();
+}
+
+void LB(int cx, int cy, int *cxf, int *cyf){
+  leds[XY(cx,cy)] = CRGB::Black;
+  *cxf=cx+1;
+  *cyf=cy-1;
+  leds[XY(*cxf,*cyf)] = CRGB ( 255,165,0);     //ltor=1 and right diag 
+  FastLED.show();
+}
+
+void LU(int cx, int cy, int *cxf, int *cyf){
+  leds[XY(cx,cy)] = CRGB::Black;
+  *cxf=cx-1;
+  *cyf=cy-1;
+  leds[XY(*cxf,*cyf)] = CRGB ( 255,165,0);     //ltor=1 and right diag 
+  FastLED.show();
+}
+
+//----OPTION PAGE FUNCTION-----------------------------------------------------------------
+int options (){
+  leds[XY(selectp,5)] = CRGB (116, 255, 3);
+  leds[XY(selectp,6)] = CRGB (116, 255, 3);
+  FastLED.show();
+  //currentmillis
+  while (select_game==0){
+    currentMillis=millis();
+    if(currentMillis-prevopsym > timerop) {
+      prevopsym = currentMillis;
+      if (frame==0){
+        prevopsym = currentMillis;
+        rowfill(0,0,7,7,0,0,0);
+        rowfill(1,1,1,2,255,235,59);
+        rowfill(4,1,4,3,255,193,7);
+        single(3,1,255,193,7);
+        rowfill(6,1,7,3,180,136,255);
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);
+        FastLED.show();
+        frame=1;
+      }
+      
+      else if (frame==1){
+        FastLED.clear();
+        rowfill(0,0,7,7,0,0,0);
+        rowfill(1,2,1,3,255,235,59);
+        rowfill(3,1,3,3,255,193,7);
+        single(4,3,255,193,7);
+        rowfill(6,1,7,1,180,136,255);
+        rowfill(6,3,7,3,180,136,255);
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);
+        FastLED.show();
+        frame=0;
+      }
+    
+    }
+  
+    if(currentMillis-prevjoyl > timerjoy) {
+      prevjoyl = currentMillis;
+      ly_pos=analogRead (joy1y);
+      if (ly_pos<400&selectp!=6){
+        leds[XY(selectp,5)] = CRGB(0,0,0);
+        leds[XY(selectp,6)] = CRGB(0,0,0);
+        if (selectp==1){
+          selectp=selectp+3;
+        }
+        else if (selectp==4){
+          selectp=selectp+2;
+        }
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);//ltor=1 and right diag 
+        FastLED.show();
+      }
+      if (ly_pos>600&selectp!=1){
+        leds[XY(selectp,5)] = CRGB(0,0,0);
+        leds[XY(selectp,6)] = CRGB(0,0,0);
+        if (selectp==4){
+          selectp=selectp-3;
+        }
+        else if (selectp==6){
+          selectp=selectp-2;
+        }
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+    }
+    if(currentMillis-prevjoyr > timerjoy) {
+      prevjoyr = currentMillis;
+      ry_pos=analogRead (joy2y);
+      if (ry_pos>600&selectp!=6){
+        leds[XY(selectp,5)] = CRGB(0,0,0);
+        leds[XY(selectp,6)] = CRGB(0,0,0);
+        if (selectp==1){
+          selectp=selectp+3;
+        }
+        else if (selectp==4){
+          selectp=selectp+2;
+        }
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);//ltor=1 and right diag 
+        FastLED.show();
+      }
+      if (ry_pos<400&selectp!=1){
+        leds[XY(selectp,5)] = CRGB(0,0,0);
+        leds[XY(selectp,6)] = CRGB(0,0,0);
+        if (selectp==4){
+          selectp=selectp-3;
+        }
+        else if (selectp==6){
+          selectp=selectp-2;
+        }
+        leds[XY(selectp,5)] = CRGB (116, 255, 3);
+        leds[XY(selectp,6)] = CRGB (116, 255, 3);     //ltor=1 and right diag 
+        FastLED.show();
+      }
+    }
+    if(currentMillis-prevjoysl > timerjoys) {
+      prevjoysl = currentMillis;
+      bsl = digitalRead(joy1s);
+      if (bsl==LOW) {
+        select_game=1;
+      }
+    }
+    if(currentMillis-prevjoysr > timerjoys) {
+      prevjoysr = currentMillis;
+      bsr = digitalRead(joy2s);
+      if (bsr==LOW) {
+        select_game=1;
+      }
+    }
+  }
+  if (selectp==1){
+    game=1;
+  }
+  else if (selectp==4){
+    game=2;
+  }
+  else if (selectp==6){
+    game=3;
+  }
+}
+
+//----CELEBRATION FUNCTION-----------------------------------------------------------------
+int celebrate(String player){
+  FastLED.clear();
+
+  rowfill(0,3,0,4,255,0,0);
+  FastLED.show();
+  delay(50);
+  single(0,2,255,0,0);
+  single(0,5,255,0,0);
+  rowfill(1,3,1,4,255,0,0);
+  FastLED.show();    
+  delay (50);
+  single(0,1,255,0,0);
+  single(0,6,255,0,0);
+  rowfill(1,1,1,2,255,0,0);
+  rowfill(1,5,1,6,255,0,0);
+  rowfill(2,2,2,5,255,0,0);
+  delay(50);
+  FastLED.show();
+  rowfill(0,0,2,0,255,0,0);
+  rowfill(0,7,2,7,255,0,0);
+  rowfill(2,1,3,1,255,0,0);
+  rowfill(2,6,3,6,255,0,0);
+  rowfill(3,2,3,5,255,0,0);
+  delay(50);
+  FastLED.show();
+  rowfill(3,0,4,0,255,0,0);
+  rowfill(3,7,4,7,255,0,0);
+  rowfill(4,1,4,6,255,0,0);
+  delay(50);
+  FastLED.show();
+  rowfill(5,0,5,7,255,0,0);
+  delay(50);
+  FastLED.show();
+  rowfill(6,0,6,7,255,0,0);
+  delay(50);
+  FastLED.show();
+  rowfill(7,0,7,7,255,0,0);
+  delay(50);
+  FastLED.show();
+  delay(1000);
+  FastLED.clear();
+  if (player==String("r")){  
+    for (int k=0; k < 12;k++){
+      for (int y=0; y < (sizeof(yw) / sizeof(yw[0]));y++){
+        if ((yw[y][0]<=7)&(yw[y][0]>=0)){
+        leds[XY(yw[y][0],yw[y][1])] = CRGB ( 255, 255, 0);
+        Serial.println(String(y));
+        Serial.println(String("{")+String(yw[y][0])+String(",")+String(yw[y][1])+String("}"));
+        Serial.println(String("{")+String(XY(yw[y][0],yw[y][1])));
+        }
+        if (k!=11){
+        yw[y][0]=yw[y][0]-1; 
+        }  
+      }
+      for (int r=0; r < (sizeof(rw) / sizeof(rw[0]));r++){
+        if ((rw[r][0])<=7&(rw[r][0]>=0)){
+        leds[XY(rw[r][0],rw[r][1])] = CRGB ( 255, 0, 0);
+        }
+        if (k!=11){
+        rw[r][0]=rw[r][0]-1;
+        }
+      }
+      for (int o=0; o < (sizeof(ow) / sizeof(ow[0]));o++){
+        if ((ow[o][0])<=7&(ow[o][0]>=0)){
+        leds[XY(ow[o][0],ow[o][1])] = CRGB ( 255, 80, 0);
+        }
+        if (k!=11){
+        ow[o][0]=ow[o][0]-1;
+        }
+      }
+      for (int p=0; p < (sizeof(pw) / sizeof(pw[0]));p++){
+        if (pw[p][0]<=7&(ow[p][0]>=0)){
+        leds[XY(pw[p][0],pw[p][1])] = CRGB ( 0,0,255);
+        }
+        if (k!=11){
+        pw[p][0]=pw[p][0]-1;
+        }
+      }
+    FastLED.show();
+    delay(100);
+  }
+    int mode=1;
+    for (int s=0; s<3;s++){
+      for (int o=0; o < (sizeof(ow) / sizeof(ow[0]));o++){
+        if (mode==1){
+          leds[XY(ow[o][0],ow[o][1])] = CRGB (0, 0, 0);
+        }
+        else if (mode==-1){
+          leds[XY(ow[o][0],ow[o][1])] = CRGB ( 255, 255, 0 );
+        }
+      }
+    FastLED.show();
+    delay(300);
+    mode=mode*(-1);
+    }
+  }
+  else if (player==String("l")){
+    for (int k=0; k < 12;k++){
+      for (int y=0; y < (sizeof(yw) / sizeof(yw[0]));y++){
+        if ((yw[y][0]<=7)&(yw[y][0]>=0)){
+        leds[XY(yw[y][0],(7-(yw[y][1])))] = CRGB ( 255, 255, 0);
+        Serial.println(String(y));
+        Serial.println(String("{")+String(yw[y][0])+String(",")+String(yw[y][1])+String("}"));
+        Serial.println(String("{")+String(XY(yw[y][0],(7-(yw[y][1]))))+String("}"));
+        }
+        if (k!=11){
+        yw[y][0]=yw[y][0]-1;  
+        } 
+      }
+      for (int r=0; r < (sizeof(rw) / sizeof(rw[0]));r++){
+        if ((rw[r][0])<=7&(rw[r][0]>=0)){
+        leds[XY(rw[r][0],(7-(rw[r][1])))] = CRGB ( 255, 0, 0);
+        }
+        if (k!=11){
+        rw[r][0]=rw[r][0]-1;
+        }
+      }
+      for (int o=0; o < (sizeof(ow) / sizeof(ow[0]));o++){
+        if ((ow[o][0])<=7&(ow[o][0]>=0)){
+        leds[XY(ow[o][0],((ow[o][1])-4))] = CRGB ( 255, 80, 0);
+        }
+        if (k!=11){
+        ow[o][0]=ow[o][0]-1;
+        }
+      }
+      for (int p=0; p < (sizeof(pw) / sizeof(pw[0]));p++){
+        if (pw[p][0]<=7&(ow[p][0]>=0)){
+        leds[XY(pw[p][0],((pw[p][1]-4)))] = CRGB ( 0,0,255);
+        }
+        if (k!=11){
+        pw[p][0]=pw[p][0]-1;
+        }
+      }
+    FastLED.show();
+    delay(100);
+  }
+  int mode=1;
+  for (int s=0; s<3;s++){
+    for (int o=0; o < (sizeof(ow) / sizeof(ow[0]));o++){
+      if (mode==1){
+        leds[XY(ow[o][0],((ow[o][1])-4))] = CRGB (0, 0, 0);
+      }
+      else if (mode==-1){
+        leds[XY(ow[o][0],((ow[o][1])-4))] = CRGB ( 255, 255, 0);
+      }
+    }
+  FastLED.show();
+  delay(300);
+  mode=mode*(-1);
+  }
+  }
+  for (int k=0; k < 11;k++){
+    for (int y=0; y < (sizeof(yw) / sizeof(yw[0]));y++){
+      yw[y][0]=yw[y][0]+1;
+    }
+    for (int r=0; r < (sizeof(rw) / sizeof(rw[0]));r++){
+      rw[r][0]=rw[r][0]+1;
+    }
+    for (int o=0; o < (sizeof(ow) / sizeof(ow[0]));o++){
+      ow[o][0]=ow[o][0]+1;
+    }
+    for (int p=0; p < (sizeof(pw) / sizeof(pw[0]));p++){
+      pw[p][0]=pw[p][0]+1;
+    }
+  }
+}
+
+//----PIXEL FILLER FUNCTIONS-----------------------------------------------------------------
+void rowfill(int sx,int sy, int ex, int ey, int colR, int colG, int colB){
+  for (int row=0; row <= ey-sy;row++){
+    for (int col=0; col <= ex-sx;col++){
+      leds[XY(sx+col,sy+row)] = CRGB ( colR,colG,colB);
+    }
+  }
+}
+
+void single(int x,int y, int colR, int colG, int colB){
+  leds[XY(x,y)] = CRGB (colR,colG,colB);
+}
+
+//----MATRIX LED CONVERSION FUNCTION-----------------------------------------------------------------
+uint16_t XY( uint8_t x, uint8_t y)
+{
+  uint16_t i;
+  
+  i = (x * matrixwidth) + y;
+  return i;
+}
